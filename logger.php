@@ -56,10 +56,11 @@ add_action( 'rest_api_init', function() {
     ] );
 } );
 
-add_action( 'wp_enqueue_scripts', function() {
-    wp_enqueue_script( 'logger-script', plugins_url( '/script.js', __FILE__ ), [], '1.0.0', true );
-} );
 
-add_action( 'admin_enqueue_scripts', function() {
-    wp_enqueue_script( 'logger-script', plugins_url( '/script.js', __FILE__ ), [], '1.0.0', true );
-} );
+function logger_register_scripts() {
+    wp_enqueue_script( 'logger-script', plugins_url( '/dist/script.js', __FILE__ ), [ 'wp-element' ], '1.0.0', true );
+    wp_enqueue_style( 'logger-style', plugins_url( '/dist/script.css', __FILE__ ) );
+}
+
+add_action( 'wp_enqueue_scripts', 'logger_register_scripts' );
+add_action( 'admin_enqueue_scripts', 'logger_register_scripts' );

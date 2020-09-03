@@ -1,0 +1,31 @@
+.logger_container {
+    width: 200px;
+    height: 200px;
+    background-color: white;
+    position: fixed;
+    bottom: 5px;
+    right: 5px;
+    border: 1px solid black;
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+
+    div.logger_button_container {
+        display: flex;
+
+        button.logger_button {
+            flex: 1;
+            background-color: white;
+            color: black;
+            padding: 0;
+            font-size: 14px;
+        }
+    }
+
+    div.logger_logs_container {
+        p {
+            line-height: 1;
+            margin: 0;
+        }
+    }
+}

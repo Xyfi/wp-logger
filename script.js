@@ -1,51 +1,73 @@
+import { render, Component } from "@wordpress/element";
+import "./style.scss";
+
 const el = document.createElement( "div" );
-el.id = "logger_log";
-el.setAttribute( "style", "width: 200px; height: 200px; background-color: white; position: fixed; bottom: 5px; right: 5px; border: 1px solid black; display: flex; flex-direction: column;" );
 document.body.appendChild( el );
 
-const update = document.createElement( "button" );
-update.innerText = "Update";
+class Logger extends Component {
+    constructor( props ) {
+        super( props );
+        this.updateLogs = this.updateLogs.bind( this );
+        this.clearLogs = this.clearLogs.bind( this );
+    }
 
-const clear = document.createElement( "button" );
-clear.innerText = "Clear";
+    state = {
+        logs: [],
+        message: "",
+    }
 
-const buttons = document.createElement( "div" );
-buttons.appendChild( update );
-buttons.appendChild( clear );
-el.appendChild( buttons );
+    updateLogs() {
+        this.setState( { logs: [] }, () => {
+            fetch( "/wp-json/logger/v1/log" ).then( data => {
+                return data.json()
+            } ).then( ( logs ) => {
+                this.setState( { logs, message: "" } );
+            } );
+        } );
+    }
 
-const inner = document.createElement( "div" );
-inner.setAttribute( "style", "overflow-y: auto; width: 100%; flex: 1;" );
-el.appendChild( inner );
+    clearLogs() {
+        this.setState( { logs: [] }, () => {
+            fetch( "/wp-json/logger/v1/clear" ).then( data => {
+                return data.json()
+            } ).then( () => {
+                this.setState( { logs: [], message: "Logs cleared!" } );
+            } );
+        } );
+    }
 
-function logger_log_update() {
-    fetch( "/wp-json/logger/v1/log" ).then( data => {
-        return data.json()
-    } ).then( ( logs ) => {
-        if ( ! logs.length ) {
-            inner.innerHTML = "No logs.";
-            return;
-        }
+    componentDidMount() {
+        this.updateLogs();
+    }
 
-        inner.innerHTML = logs.reduce( ( acc, log ) => {
-            log.is_json ? console.log( log.prefix, JSON.parse( log.message ) ) : console.log( log.prefix, log.message );
+    render () {
+        return(
+            <div className="logger_container">
+                <div className="logger_button_container">
+                    <button onClick={ this.updateLogs } className="logger_button">Refresh</button>
+                    <button onClick={ this.clearLogs } className="logger_button">Clear</button>
+                </div>
+                <div className="logger_logs_container">
+                    { this.state.message ? this.state.message : null }
+                    { this.state.logs.map( ( log, index ) => {
+                        log.is_json ? console.log( log.prefix, JSON.parse( log.message ) ) : console.log( log.prefix, log.message );
 
-            if ( log.is_json ) {
-                log.message = "See console for output.";
-            }
+                        if ( log.is_json ) {
+                            log.message = "See console for output.";
+                        }
 
-            return  '<p style="margin:0;"><b>' + log.prefix + "</b>" + `[${ log.type }] ` + log.message + '</p>' + acc;
-        }, '' );
-    } );
+                        return (
+                            <p key={ index }>
+                                <b>{log.prefix}</b>
+                                { `[${log.type}]` }
+                                { log.message }
+                            </p>
+                        );
+                    } ) }
+                </div>
+            </div>
+        );
+    }
 }
 
-function logger_log_clear() {
-    fetch( "/wp-json/logger/v1/clear" ).then( () => {
-        inner.innerHTML = "Log cleared.";
-    } );
-}
-
-logger_log_update();
-
-update.onclick = logger_log_update;
-clear.onclick = logger_log_clear;
+render( <Logger />, el );

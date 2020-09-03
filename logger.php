@@ -4,10 +4,6 @@ Plugin Name: Logger
  */
 
 function logger_log( $message, $prefix = 'Log: ' ) {
-    $newfile = __DIR__ . '/log.txt';
-
-    $fh = fopen($newfile, 'a') or die("Can't create file");
-
     if ( is_null( $message ) ) {
         $message = 'NULL';
     }
@@ -20,13 +16,22 @@ function logger_log( $message, $prefix = 'Log: ' ) {
         }
     }
 
-    try {
-        $message = wp_json_encode( $message );
-    } catch( \Exception $e ) {}
+    $is_json = false;
+
+    if ( ! is_scalar( $message ) ) {
+        try {
+            $message = wp_json_encode( $message );
+            $is_json = true;
+        } catch( \Exception $e ) {}
+    }
 
     $log = get_option( 'logger_log', [] );
 
-    $log[] = $prefix . $message;
+    $log[] = [
+        'prefix' => $prefix,
+        'message' => $message,
+        'is_json' => $is_json,
+    ];
 
     update_option( 'logger_log', $log );
 }
@@ -35,7 +40,7 @@ add_action( 'rest_api_init', function() {
     register_rest_route( 'logger/v1', '/log', [
         'methods' => 'GET',
         'callback' => function() {
-            return get_option( 'logger_log', '' );
+            return get_option( 'logger_log', [] );
         }
     ] );
 
@@ -50,7 +55,7 @@ add_action( 'rest_api_init', function() {
 
 add_action( 'admin_footer', function() {
     ?>
-        <script>
+        <script type="application/javascript">
             const el = document.createElement( "div" );
             el.id = "logger_log";
             el.setAttribute( "style", "width: 200px; height: 200px; background-color: white; position: fixed; bottom: 5px; right: 5px; border: 1px solid black; display: flex; flex-direction: column;" );
@@ -81,8 +86,13 @@ add_action( 'admin_footer', function() {
                     }
 
                     inner.innerHTML = logs.reduce( ( acc, log ) => {
-                        console.log( log );
-                        return  acc + '<p>' + log + '</p>';
+                        log.is_json ? console.log( log.prefix, JSON.parse( log.message ) ) : console.log( log.prefix, log.message );
+
+                        if ( log.is_json ) {
+                            log.message = "[JSON Object] See console for output.";
+                        }
+
+                        return  acc + '<p style="margin:0;"><b>' + log.prefix + "</b>" + log.message + '</p>';
                     }, '' );
                 } );
             }

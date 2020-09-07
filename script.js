@@ -1,8 +1,16 @@
-import { render, Component } from "@wordpress/element";
+import { render, Component, createPortal, Fragment } from "@wordpress/element";
 import "./style.scss";
 
 const el = document.createElement( "div" );
 document.body.appendChild( el );
+
+const toggle = document.createElement( "div" );
+toggle.setAttribute( "style", "float: left;" );
+const adminBar = document.getElementById( "wp-admin-bar-top-secondary" );
+
+if ( adminBar ) {
+    adminBar.insertBefore( toggle, adminBar.firstElement );
+}
 
 class Logger extends Component {
     constructor( props ) {
@@ -14,6 +22,7 @@ class Logger extends Component {
     state = {
         logs: [],
         message: "",
+        show: localStorage.getItem( "logger-show-logger" ) === "true" || false,
     }
 
     updateLogs() {
@@ -42,30 +51,48 @@ class Logger extends Component {
 
     render () {
         return(
-            <div className="logger_container">
-                <div className="logger_button_container">
-                    <button onClick={ this.updateLogs } className="logger_button">Refresh</button>
-                    <button onClick={ this.clearLogs } className="logger_button">Clear</button>
-                </div>
-                <div className="logger_logs_container">
-                    { this.state.message ? this.state.message : null }
-                    { this.state.logs.map( ( log, index ) => {
-                        log.is_json ? console.log( log.prefix, JSON.parse( log.message ) ) : console.log( log.prefix, log.message );
+            <Fragment>
+                {
+                    createPortal(
+                        <a className="logger_toggle ab-item" onClick={ () => {
+                            const show = ! this.state.show;
 
-                        if ( log.is_json ) {
-                            log.message = "See console for output.";
-                        }
+                            this.setState( { show }, () => {
+                                localStorage.setItem( "logger-show-logger", show );
+                            } )
+                        } }>
+                            Show logger
+                        </a>
+                    , toggle )
+                }
+                { this.state.show && <div className="logger_container">
+                        <div className="logger_button_container">
+                            <button onClick={ this.updateLogs } className="logger_button">Refresh</button>
+                            <button onClick={ this.clearLogs } className="logger_button">Clear</button>
+                        </div>
+                        <div className="logger_logs_container">
+                            { this.state.message ? this.state.message : null }
+                            { this.state.logs.map( ( log, index ) => {
+                                log.is_json ? console.log( log.prefix, JSON.parse( log.message ) ) : console.log( log.prefix, log.message );
 
-                        return (
-                            <p key={ index }>
-                                <b>{log.prefix}</b>
-                                { `[${log.type}]` }
-                                { log.message }
-                            </p>
-                        );
-                    } ) }
-                </div>
-            </div>
+                                let message = log.message;
+
+                                if ( log.is_json ) {
+                                    message = "See console for output.";
+                                }
+
+                                return (
+                                    <p key={ index }>
+                                        <b>{log.prefix}</b>
+                                        { `[${log.type}]` }
+                                        { message }
+                                    </p>
+                                );
+                            } ) }
+                        </div>
+                    </div> 
+                }
+            </Fragment>
         );
     }
 }
